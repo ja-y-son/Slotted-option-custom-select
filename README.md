@@ -98,6 +98,11 @@ The following spec algorithms and definitions assume DOM tree traversal and woul
 
 5. **No slot-change hook for select ([DOM spec: "signal a slot change"](https://dom.spec.whatwg.org/#signal-a-slot-change))** — When slot assignment changes, there is currently no mechanism for a select element to be notified that options may have been added or removed from its flat tree. A new hook is needed so the select can re-run its selectedness setting algorithm when slot assignment changes.
 
+## Prior prototyping
+- [CL 6516400: Support slotting \<options\> in \<select\>](https://chromium-review.googlesource.com/c/chromium/src/+/6516400) — Adds basic functionality to slot `<option>` elements into a `<select>` by looking at the flat tree when the select has a descendant `<slot>` that fires `slotchange`. Observable via `select.options` and `select.selectedOptions`. Currently has merge conflicts and open review feedback around the overall approach (e.g., concerns about modifying `HTMLCollection` for flat-tree traversals and adding select-specific logic to `HTMLSlotElement`).
+- [CL 6892064: Make \<select\> UA styles work for slotted options](https://chromium-review.googlesource.com/c/chromium/src/+/6892064) — Companion CL that changes UA stylesheet selectors for `<option>` and `<optgroup>` from ancestor-based selectors (which only match in light DOM) to pseudo-classes applied directly on the elements, enabling UA styles to work across the flat tree.
+- [Design/discussion doc](https://docs.google.com/document/d/1f3dqMe00eZqC3DLDh93_D5tVRiDDByfbQDH3CU8p2gE/edit?usp=sharing)
+
 ## Design:
 - The correct select needs to know it needs to recalc
     - Can base-appearance select know that its base-appearance?
