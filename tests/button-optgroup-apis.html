@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Slotted Button, Optgroups, and Imperative APIs</title>
+  <style>
+    select, ::picker(select) {
+      appearance: base-select;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .test-case {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+    .test-left {
+      padding: 1.5rem;
+    }
+    .test-left h2 { margin-top: 0; }
+    .test-right {
+      background: #1e1e2e;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      border-left: 3px solid #585880;
+    }
+    .test-right pre {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.45;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      color: #cdd6f4;
+    }
+    .tag   { color: #89b4fa; }
+    .attr  { color: #f9e2af; }
+    .val   { color: #a6e3a1; }
+    .cmt   { color: #6c7086; font-style: italic; }
+    .slot  { color: #fab387; font-weight: bold; }
+    .light { background: rgba(166,227,161,0.1); display: inline; }
+    .btn-hi { background: rgba(137,180,250,0.15); display: inline; }
+    .disabled-hi { background: rgba(243,139,168,0.12); display: inline; }
+    .shadow-block {
+      border-left: 2px solid #b4befe;
+      padding-left: 0.5rem;
+      margin-left: 0.25rem;
+    }
+    .legend {
+      font-size: 11px;
+      margin-bottom: 0.75rem;
+      color: #a6adc8;
+    }
+    .legend span {
+      display: inline-block;
+      margin-right: 0.8rem;
+    }
+    .legend .swatch {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 3px;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .pass { color: green; }
+    .fail { color: red; }
+    .flat-tree-label {
+      color: #f38ba8;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test: Slotted Button, Optgroups &amp; Imperative APIs</h1>
+
+  <!-- ============================================================ -->
+  <!-- Test 1: Slotted button as select trigger                      -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>1. Slotted button replaces default trigger</h2>
+      <p>
+        In base-appearance select, the first child <code>&lt;button&gt;</code>
+        becomes the trigger. When both a button and options are slotted,
+        the select must distinguish them: the button is the trigger, and
+        the options populate the dropdown.
+      </p>
+
+      <my-custom-select id="test1">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <button>Pick a fruit</button>
+        <option value="apple">Apple</option>
+        <option value="banana">Banana</option>
+        <option value="cherry">Cherry</option>
+      </my-custom-select>
+
+      <div class="result" id="result1"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#89b4fa"></span> Button (trigger)</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Options (slotted)</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="cmt">── shadow root ──────────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="cmt">▼ assigned nodes (light DOM):</span>
+      <span class="btn-hi"><span class="tag">&lt;button&gt;</span>Pick a fruit<span class="tag">&lt;/button&gt;</span>  ← <span class="cmt">trigger, NOT an option</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"apple"</span><span class="tag">&gt;</span>Apple<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"banana"</span><span class="tag">&gt;</span>Banana<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"cherry"</span><span class="tag">&gt;</span>Cherry<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+  <span class="cmt">─────────────────────────────────</span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length === 3 <span class="cmt">(button excluded)</span>
+Button renders as select's trigger</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 2: Slotted optgroup with options                         -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>2. Slotted optgroup with nested options</h2>
+      <p>
+        <code>&lt;optgroup&gt;</code> elements slotted from the light DOM
+        should preserve grouping. Options inside a disabled optgroup should
+        be disabled.
+      </p>
+
+      <my-custom-select id="test2">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <optgroup label="Fruits">
+          <option value="apple">Apple</option>
+          <option value="banana">Banana</option>
+        </optgroup>
+        <optgroup label="Vegetables" disabled>
+          <option value="carrot">Carrot</option>
+          <option value="pea">Pea</option>
+        </optgroup>
+        <option value="water">Water</option>
+      </my-custom-select>
+
+      <div class="result" id="result2"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+        <span><span class="swatch" style="background:#f38ba8"></span> Disabled</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="cmt">── shadow root ──────────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;optgroup</span> <span class="attr">label=</span><span class="val">"Fruits"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"apple"</span><span class="tag">&gt;</span>Apple<span class="tag">&lt;/option&gt;</span>     <span class="cmt">index 0</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"banana"</span><span class="tag">&gt;</span>Banana<span class="tag">&lt;/option&gt;</span>   <span class="cmt">index 1</span>
+      <span class="tag">&lt;/optgroup&gt;</span></span>
+      <span class="disabled-hi"><span class="tag">&lt;optgroup</span> <span class="attr">label=</span><span class="val">"Vegetables"</span> <span class="attr">disabled</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"carrot"</span><span class="tag">&gt;</span>Carrot<span class="tag">&lt;/option&gt;</span>   <span class="cmt">index 2, disabled!</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"pea"</span><span class="tag">&gt;</span>Pea<span class="tag">&lt;/option&gt;</span>         <span class="cmt">index 3, disabled!</span>
+      <span class="tag">&lt;/optgroup&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"water"</span><span class="tag">&gt;</span>Water<span class="tag">&lt;/option&gt;</span>     <span class="cmt">index 4, standalone</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+  <span class="cmt">─────────────────────────────────</span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length === 5
+options[2].disabled === true <span class="cmt">(via optgroup)</span>
+options[3].disabled === true <span class="cmt">(via optgroup)</span></pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 3: Slotted button + optgroups combined                   -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>3. Slotted button + optgroups combined</h2>
+      <p>
+        Button as trigger, options organized in optgroups — all slotted.
+      </p>
+
+      <my-custom-select id="test3">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <button>Choose a color</button>
+        <optgroup label="Warm">
+          <option value="red">Red</option>
+          <option value="orange">Orange</option>
+        </optgroup>
+        <optgroup label="Cool">
+          <option value="blue" selected>Blue</option>
+          <option value="green">Green</option>
+        </optgroup>
+      </my-custom-select>
+
+      <div class="result" id="result3"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#89b4fa"></span> Button</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Options</span>
+        <span><span class="swatch" style="background:#fab387"></span> &lt;slot&gt;</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="btn-hi"><span class="tag">&lt;button&gt;</span>Choose a color<span class="tag">&lt;/button&gt;</span>  ← <span class="cmt">trigger</span></span>
+      <span class="light"><span class="tag">&lt;optgroup</span> <span class="attr">label=</span><span class="val">"Warm"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"red"</span><span class="tag">&gt;</span>Red<span class="tag">&lt;/option&gt;</span>         <span class="cmt">index 0</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"orange"</span><span class="tag">&gt;</span>Orange<span class="tag">&lt;/option&gt;</span>  <span class="cmt">index 1</span>
+      <span class="tag">&lt;/optgroup&gt;</span></span>
+      <span class="light"><span class="tag">&lt;optgroup</span> <span class="attr">label=</span><span class="val">"Cool"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"blue"</span> <span class="attr">selected</span><span class="tag">&gt;</span>Blue<span class="tag">&lt;/option&gt;</span>  <span class="cmt">index 2 ←</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"green"</span><span class="tag">&gt;</span>Green<span class="tag">&lt;/option&gt;</span>    <span class="cmt">index 3</span>
+      <span class="tag">&lt;/optgroup&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length === 4 <span class="cmt">(no button)</span>
+select.value === "blue"
+select.selectedIndex === 2</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 4: Imperative value/selectedIndex assignment             -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>4. Imperative API: set value and selectedIndex</h2>
+      <p>
+        Setting <code>select.value</code> and <code>select.selectedIndex</code>
+        imperatively should work correctly with slotted options.
+      </p>
+
+      <my-custom-select id="test4">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="dog">Dog</option>
+        <option value="cat">Cat</option>
+        <option value="fish">Fish</option>
+        <option value="bird">Bird</option>
+      </my-custom-select>
+
+      <div class="result" id="result4"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"dog"</span><span class="tag">&gt;</span>Dog<span class="tag">&lt;/option&gt;</span>    <span class="cmt">index 0</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"cat"</span><span class="tag">&gt;</span>Cat<span class="tag">&lt;/option&gt;</span>    <span class="cmt">index 1</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"fish"</span><span class="tag">&gt;</span>Fish<span class="tag">&lt;/option&gt;</span>  <span class="cmt">index 2</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"bird"</span><span class="tag">&gt;</span>Bird<span class="tag">&lt;/option&gt;</span>  <span class="cmt">index 3</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">JS OPERATIONS &amp; EXPECTED RESULTS:</span>
+<span class="cmt">Step 1:</span> sel.value = "fish"
+  → value === "fish", selectedIndex === 2
+
+<span class="cmt">Step 2:</span> sel.selectedIndex = 3
+  → value === "bird", selectedIndex === 3</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 5: option nearest-ancestor-select                        -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>5. Option's nearest ancestor select</h2>
+      <p>
+        A slotted option's <code>.form</code>, <code>.index</code>, and
+        <code>.selected</code> properties should correctly reference
+        the shadow-DOM select as if it were the option's ancestor.
+      </p>
+
+      <my-custom-select id="test5">
+        <template shadowrootmode="open">
+          <select id="innerSelect5">
+            <slot></slot>
+          </select>
+        </template>
+        <option value="one" id="opt5a">One</option>
+        <option value="two" id="opt5b" selected>Two</option>
+        <option value="three" id="opt5c">Three</option>
+      </my-custom-select>
+
+      <div class="result" id="result5"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Slotted options</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>                 <span class="cmt">← ancestor in flat tree</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">id=</span><span class="val">"opt5a"</span><span class="tag">&gt;</span>One<span class="tag">&lt;/option&gt;</span></span>    <span class="cmt">.index=0  .selected=false</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">id=</span><span class="val">"opt5b"</span> <span class="attr">selected</span><span class="tag">&gt;</span>Two<span class="tag">&lt;/option&gt;</span></span>  <span class="cmt">.index=1  .selected=true</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">id=</span><span class="val">"opt5c"</span><span class="tag">&gt;</span>Three<span class="tag">&lt;/option&gt;</span></span>  <span class="cmt">.index=2  .selected=false</span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">KEY ISSUE:</span>
+DOM ancestor chain: option → my-custom-select → ...
+<span class="cmt">(no &lt;select&gt; found!)</span>
+
+Flat-tree ancestor chain: option → slot → <span class="tag">&lt;select&gt;</span>
+<span class="cmt">(select IS found ✓)</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+opt5b.selected === true
+opt5a.index === 0
+opt5b.index === 1</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 6: Dynamic optgroup insertion/removal                    -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>6. Dynamic optgroup insertion and removal</h2>
+      <p>
+        Adding/removing an <code>&lt;optgroup&gt;</code> (with options inside)
+        to the light DOM should update the select.
+      </p>
+
+      <my-custom-select id="test6">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="solo">Solo option</option>
+      </my-custom-select>
+
+      <button id="addGroupBtn">Add optgroup (Cat, Dog)</button>
+      <button id="removeGroupBtn">Remove optgroup</button>
+      <div class="result" id="result6"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="cmt">INITIAL:</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"solo"</span><span class="tag">&gt;</span>Solo option<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="cmt">AFTER adding optgroup (JS appends to light DOM):</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"solo"</span><span class="tag">&gt;</span>Solo option<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;optgroup</span> <span class="attr">label=</span><span class="val">"Animals"</span><span class="tag">&gt;</span>          ← <span class="cmt">new</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"cat"</span><span class="tag">&gt;</span>Cat<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"dog"</span><span class="tag">&gt;</span>Dog<span class="tag">&lt;/option&gt;</span>
+      <span class="tag">&lt;/optgroup&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+options.length: 1 → 3 <span class="cmt">(after add)</span>
+options.length: 3 → 1 <span class="cmt">(after remove)</span></pre>
+    </div>
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────
+    function getInnerSelect(host) {
+      return host.shadowRoot.querySelector('select');
+    }
+
+    function report(id, lines) {
+      document.getElementById(id).innerHTML = lines
+        .map(([ok, msg]) =>
+          `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${msg}</span>`)
+        .join('\n');
+    }
+
+    // ── Test 1: Slotted button ──────────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test1'));
+      const opts = sel.options;
+      report('result1', [
+        [opts.length === 3,
+          `select.options.length === 3 (got ${opts.length}) — button not counted`],
+        [opts[0]?.value === 'apple',
+          `select.options[0].value === "apple" (got "${opts[0]?.value}")`],
+        [opts[2]?.value === 'cherry',
+          `select.options[2].value === "cherry" (got "${opts[2]?.value}")`],
+        [!Array.from(opts).some(o => o.tagName === 'BUTTON'),
+          `No <button> in select.options`],
+      ]);
+    }
+
+    // ── Test 2: Slotted optgroups ───────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test2'));
+      const opts = sel.options;
+      report('result2', [
+        [opts.length === 5,
+          `select.options.length === 5 (got ${opts.length}) — all options across groups + standalone`],
+        [opts[0]?.value === 'apple',
+          `options[0].value === "apple" (got "${opts[0]?.value}")`],
+        [opts[2]?.disabled === true,
+          `options[2] ("Carrot") is disabled via parent optgroup (got disabled=${opts[2]?.disabled})`],
+        [opts[3]?.disabled === true,
+          `options[3] ("Pea") is disabled via parent optgroup (got disabled=${opts[3]?.disabled})`],
+        [opts[4]?.value === 'water',
+          `options[4].value === "water" — standalone option after groups (got "${opts[4]?.value}")`],
+      ]);
+    }
+
+    // ── Test 3: Button + optgroups ──────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test3'));
+      const opts = sel.options;
+      report('result3', [
+        [opts.length === 4,
+          `select.options.length === 4 (got ${opts.length})`],
+        [sel.value === 'blue',
+          `select.value === "blue" (pre-selected, got "${sel.value}")`],
+        [sel.selectedIndex === 2,
+          `select.selectedIndex === 2 (got ${sel.selectedIndex})`],
+        [!Array.from(opts).some(o => o.tagName === 'BUTTON'),
+          `No <button> in select.options`],
+      ]);
+    }
+
+    // ── Test 4: Imperative API ──────────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test4'));
+
+      sel.value = 'fish';
+      const afterValue = [sel.value, sel.selectedIndex];
+
+      sel.selectedIndex = 3;
+      const afterIndex = [sel.value, sel.selectedIndex];
+
+      report('result4', [
+        [afterValue[0] === 'fish',
+          `After sel.value = "fish": value === "fish" (got "${afterValue[0]}")`],
+        [afterValue[1] === 2,
+          `After sel.value = "fish": selectedIndex === 2 (got ${afterValue[1]})`],
+        [afterIndex[0] === 'bird',
+          `After sel.selectedIndex = 3: value === "bird" (got "${afterIndex[0]}")`],
+        [afterIndex[1] === 3,
+          `After sel.selectedIndex = 3: selectedIndex === 3 (got ${afterIndex[1]})`],
+      ]);
+    }
+
+    // ── Test 5: Nearest ancestor select ─────────────────────────
+    {
+      const host = document.getElementById('test5');
+      const sel = getInnerSelect(host);
+      const optA = document.getElementById('opt5a');
+      const optB = document.getElementById('opt5b');
+
+      report('result5', [
+        [optB?.selected === true,
+          `opt5b.selected === true (got ${optB?.selected})`],
+        [optA?.selected === false,
+          `opt5a.selected === false (got ${optA?.selected})`],
+        [optA?.index === 0,
+          `opt5a.index === 0 (got ${optA?.index})`],
+        [optB?.index === 1,
+          `opt5b.index === 1 (got ${optB?.index})`],
+      ]);
+    }
+
+    // ── Test 6: Dynamic optgroup ────────────────────────────────
+    {
+      const host = document.getElementById('test6');
+      const sel = getInnerSelect(host);
+      let addedGroup = null;
+
+      function checkTest6(label) {
+        const lightCount = host.querySelectorAll('option').length;
+        report('result6', [
+          [true, `── ${label} ──`],
+          [sel.options.length === lightCount,
+            `select.options.length === ${lightCount} (got ${sel.options.length})`],
+        ]);
+      }
+
+      checkTest6('Initial (1 solo option)');
+
+      document.getElementById('addGroupBtn').addEventListener('click', () => {
+        addedGroup = document.createElement('optgroup');
+        addedGroup.label = 'Animals';
+        const o1 = document.createElement('option');
+        o1.value = 'cat'; o1.textContent = 'Cat';
+        const o2 = document.createElement('option');
+        o2.value = 'dog'; o2.textContent = 'Dog';
+        addedGroup.append(o1, o2);
+        host.appendChild(addedGroup);
+        requestAnimationFrame(() => checkTest6('After adding optgroup'));
+      });
+
+      document.getElementById('removeGroupBtn').addEventListener('click', () => {
+        if (addedGroup) { addedGroup.remove(); addedGroup = null; }
+        requestAnimationFrame(() => checkTest6('After removing optgroup'));
+      });
+    }
+  </script>
+</body>
+</html>

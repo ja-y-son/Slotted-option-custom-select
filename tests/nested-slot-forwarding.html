@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nested Slot Forwarding for Custom Select</title>
+  <style>
+    select, ::picker(select) {
+      appearance: base-select;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .test-case {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+    .test-left {
+      padding: 1.5rem;
+    }
+    .test-left h2 { margin-top: 0; }
+    .test-right {
+      background: #1e1e2e;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      border-left: 3px solid #585880;
+    }
+    .test-right pre {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.45;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      color: #cdd6f4;
+    }
+    .tag   { color: #89b4fa; }
+    .attr  { color: #f9e2af; }
+    .val   { color: #a6e3a1; }
+    .cmt   { color: #6c7086; font-style: italic; }
+    .slot  { color: #fab387; font-weight: bold; }
+    .light { background: rgba(166,227,161,0.1); display: inline; }
+    .shadow-block {
+      border-left: 2px solid #b4befe;
+      padding-left: 0.5rem;
+      margin-left: 0.25rem;
+    }
+    .shadow-block .shadow-block {
+      border-left-color: #cba6f7;
+    }
+    .shadow-block .shadow-block .shadow-block {
+      border-left-color: #f5c2e7;
+    }
+    .legend {
+      font-size: 11px;
+      margin-bottom: 0.75rem;
+      color: #a6adc8;
+    }
+    .legend span {
+      display: inline-block;
+      margin-right: 0.8rem;
+    }
+    .legend .swatch {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 3px;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .pass { color: green; }
+    .fail { color: red; }
+    .flat-tree-label {
+      color: #f38ba8;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test: Nested Slot Forwarding</h1>
+  <p>
+    Options are forwarded through <em>multiple</em> shadow boundaries via
+    nested slots. The innermost <code>&lt;select&gt;</code> must still
+    discover them.
+  </p>
+
+  <!-- ============================================================ -->
+  <!-- Test 1: Two-level nesting                                     -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>1. Two-level nested slot forwarding</h2>
+      <p>
+        Options live in the light DOM of <code>&lt;my-section&gt;</code>,
+        are slotted into its shadow DOM, then forwarded through
+        <code>&lt;my-custom-select&gt;</code>'s slot into the inner
+        <code>&lt;select&gt;</code>.
+      </p>
+
+      <my-section id="test1">
+        <template shadowrootmode="open">
+          <my-custom-select>
+            <template shadowrootmode="open">
+              <select>
+                <slot></slot>
+              </select>
+            </template>
+            <slot></slot>
+          </my-custom-select>
+        </template>
+        <option value="a">Apple</option>
+        <option value="b">Banana</option>
+        <option value="c">Cherry</option>
+      </my-section>
+
+      <div class="result" id="result1"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow 1</span>
+        <span><span class="swatch" style="background:#cba6f7"></span> Shadow 2</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+        <span><span class="swatch" style="background:#fab387"></span> &lt;slot&gt;</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-section&gt;</span>
+  <span class="cmt">── shadow root 1 ───────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;my-custom-select&gt;</span>
+    <span class="cmt">── shadow root 2 ─────────────</span>
+    <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+      <span class="slot">&lt;slot&gt;</span>  <span class="cmt">← inner slot</span>
+      <span class="slot">&lt;/slot&gt;</span>
+    <span class="tag">&lt;/select&gt;</span></span>
+    <span class="cmt">──────────────────────────────</span>
+    <span class="slot">&lt;slot&gt;</span>  <span class="cmt">← outer slot (forwarding)</span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/my-custom-select&gt;</span></span>
+  <span class="cmt">────────────────────────────────</span>
+  <span class="cmt">Light DOM children of my-section:</span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"a"</span><span class="tag">&gt;</span>Apple<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Banana<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"c"</span><span class="tag">&gt;</span>Cherry<span class="tag">&lt;/option&gt;</span></span>
+<span class="tag">&lt;/my-section&gt;</span>
+
+<span class="flat-tree-label">SLOT CHAIN:</span>
+options → <span class="slot">outer slot</span> → <span class="slot">inner slot</span> → inside &lt;select&gt;
+
+<span class="flat-tree-label">FLAT TREE (what select should see):</span>
+<span class="tag">&lt;select&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"a"</span><span class="tag">&gt;</span>Apple<span class="tag">&lt;/option&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Banana<span class="tag">&lt;/option&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"c"</span><span class="tag">&gt;</span>Cherry<span class="tag">&lt;/option&gt;</span>
+<span class="tag">&lt;/select&gt;</span></pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 2: Three-level nesting                                   -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>2. Three-level nested slot forwarding</h2>
+      <p>
+        Three layers of shadow DOM: <code>&lt;my-app&gt;</code> →
+        <code>&lt;my-section&gt;</code> → <code>&lt;my-custom-select&gt;</code>.
+      </p>
+
+      <my-app id="test2">
+        <template shadowrootmode="open">
+          <my-section>
+            <template shadowrootmode="open">
+              <my-custom-select>
+                <template shadowrootmode="open">
+                  <select>
+                    <slot></slot>
+                  </select>
+                </template>
+                <slot></slot>
+              </my-custom-select>
+            </template>
+            <slot></slot>
+          </my-section>
+        </template>
+        <option value="1">First</option>
+        <option value="2" selected>Second</option>
+        <option value="3">Third</option>
+      </my-app>
+
+      <div class="result" id="result2"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow 1</span>
+        <span><span class="swatch" style="background:#cba6f7"></span> Shadow 2</span>
+        <span><span class="swatch" style="background:#f5c2e7"></span> Shadow 3</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-app&gt;</span>
+  <span class="cmt">── shadow root 1 ───────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;my-section&gt;</span>
+    <span class="cmt">── shadow root 2 ─────────────</span>
+    <span class="shadow-block"><span class="tag">&lt;my-custom-select&gt;</span>
+      <span class="cmt">── shadow root 3 ───────────</span>
+      <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+        <span class="slot">&lt;slot&gt;</span>  <span class="cmt">← innermost</span>
+        <span class="slot">&lt;/slot&gt;</span>
+      <span class="tag">&lt;/select&gt;</span></span>
+      <span class="cmt">────────────────────────────</span>
+      <span class="slot">&lt;slot&gt;</span>  <span class="cmt">← middle</span>
+      <span class="slot">&lt;/slot&gt;</span>
+    <span class="tag">&lt;/my-custom-select&gt;</span></span>
+    <span class="cmt">──────────────────────────────</span>
+    <span class="slot">&lt;slot&gt;</span>  <span class="cmt">← outermost</span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/my-section&gt;</span></span>
+  <span class="cmt">────────────────────────────────</span>
+  <span class="cmt">Light DOM children of my-app:</span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"1"</span><span class="tag">&gt;</span>First<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"2"</span> <span class="attr">selected</span><span class="tag">&gt;</span>Second<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"3"</span><span class="tag">&gt;</span>Third<span class="tag">&lt;/option&gt;</span></span>
+<span class="tag">&lt;/my-app&gt;</span>
+
+<span class="flat-tree-label">SLOT CHAIN:</span>
+options → <span class="slot">outermost slot</span> → <span class="slot">middle slot</span> → <span class="slot">inner slot</span> → &lt;select&gt;
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length === 3
+select.selectedIndex === 1  <span class="cmt">(Second)</span></pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 3: Dynamic insertion into nested structure               -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>3. Dynamic insertion into nested structure</h2>
+      <p>
+        Adding an option to the outermost light DOM should propagate
+        through all slot layers and appear in the inner select.
+      </p>
+
+      <my-section id="test3">
+        <template shadowrootmode="open">
+          <my-custom-select>
+            <template shadowrootmode="open">
+              <select>
+                <slot></slot>
+              </select>
+            </template>
+            <slot></slot>
+          </my-custom-select>
+        </template>
+        <option value="x">X-ray</option>
+        <option value="y">Yankee</option>
+      </my-section>
+
+      <button id="addNestedBtn">Add "Zulu"</button>
+      <div class="result" id="result3"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow 1</span>
+        <span><span class="swatch" style="background:#cba6f7"></span> Shadow 2</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="cmt">BEFORE:</span>
+<span class="tag">&lt;my-section&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;my-custom-select&gt;</span>
+    <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+      <span class="slot">&lt;slot&gt;</span><span class="slot">&lt;/slot&gt;</span>
+    <span class="tag">&lt;/select&gt;</span></span>
+    <span class="slot">&lt;slot&gt;</span><span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/my-custom-select&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"x"</span><span class="tag">&gt;</span>X-ray<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"y"</span><span class="tag">&gt;</span>Yankee<span class="tag">&lt;/option&gt;</span></span>
+<span class="tag">&lt;/my-section&gt;</span>
+
+<span class="cmt">AFTER click (appends to my-section light DOM):</span>
+<span class="tag">&lt;my-section&gt;</span>
+  <span class="shadow-block">...</span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"x"</span><span class="tag">&gt;</span>X-ray<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"y"</span><span class="tag">&gt;</span>Yankee<span class="tag">&lt;/option&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"z"</span><span class="tag">&gt;</span>Zulu<span class="tag">&lt;/option&gt;</span>  ← <span class="cmt">new</span></span>
+<span class="tag">&lt;/my-section&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+New option propagates through both slots
+select.options.length: 2 → 3</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 4: Imperative selectedIndex through nested slots         -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>4. Imperative selectedIndex through nested slots</h2>
+      <p>
+        Setting <code>select.selectedIndex</code> programmatically should
+        select the correct slotted option, even across two shadow boundaries.
+      </p>
+
+      <my-section id="test4">
+        <template shadowrootmode="open">
+          <my-custom-select>
+            <template shadowrootmode="open">
+              <select>
+                <slot></slot>
+              </select>
+            </template>
+            <slot></slot>
+          </my-custom-select>
+        </template>
+        <option value="r">Red</option>
+        <option value="g">Green</option>
+        <option value="b">Blue</option>
+      </my-section>
+
+      <div class="result" id="result4"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow 1</span>
+        <span><span class="swatch" style="background:#cba6f7"></span> Shadow 2</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-section&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;my-custom-select&gt;</span>
+    <span class="shadow-block"><span class="tag">&lt;select&gt;</span>             <span class="cmt">← JS: sel.selectedIndex = 2</span>
+      <span class="slot">&lt;slot&gt;</span><span class="slot">&lt;/slot&gt;</span>
+    <span class="tag">&lt;/select&gt;</span></span>
+    <span class="slot">&lt;slot&gt;</span><span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/my-custom-select&gt;</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"r"</span><span class="tag">&gt;</span>Red<span class="tag">&lt;/option&gt;</span>    <span class="cmt">index 0</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"g"</span><span class="tag">&gt;</span>Green<span class="tag">&lt;/option&gt;</span>  <span class="cmt">index 1</span></span>
+  <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Blue<span class="tag">&lt;/option&gt;</span>   <span class="cmt">index 2 ← selected</span></span>
+<span class="tag">&lt;/my-section&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.selectedIndex === 2
+select.value === "b"
+selectedOptions[0].textContent === "Blue"</pre>
+    </div>
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────
+    function deepSelect(root) {
+      let node = root;
+      while (node) {
+        const sr = node.shadowRoot;
+        if (!sr) break;
+        const sel = sr.querySelector('select');
+        if (sel) return sel;
+        node = sr.querySelector('[shadowroot], *');
+        for (const child of sr.children) {
+          if (child.shadowRoot) { node = child; break; }
+        }
+      }
+      return null;
+    }
+
+    function report(id, lines) {
+      document.getElementById(id).innerHTML = lines
+        .map(([ok, msg]) =>
+          `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${msg}</span>`)
+        .join('\n');
+    }
+
+    // ── Test 1 ──────────────────────────────────────────────────
+    {
+      const sel = deepSelect(document.getElementById('test1'));
+      report('result1', [
+        [!!sel, `Found inner <select> element`],
+        [sel?.options.length === 3,
+          `select.options.length === 3 (got ${sel?.options.length})`],
+        [sel?.options[0]?.value === 'a',
+          `select.options[0].value === "a" (got "${sel?.options[0]?.value}")`],
+        [sel?.options[2]?.textContent === 'Cherry',
+          `select.options[2].textContent === "Cherry" (got "${sel?.options[2]?.textContent}")`],
+      ]);
+    }
+
+    // ── Test 2 ──────────────────────────────────────────────────
+    {
+      const sel = deepSelect(document.getElementById('test2'));
+      report('result2', [
+        [!!sel, `Found inner <select> across three shadow boundaries`],
+        [sel?.options.length === 3,
+          `select.options.length === 3 (got ${sel?.options.length})`],
+        [sel?.selectedIndex === 1,
+          `select.selectedIndex === 1 (got ${sel?.selectedIndex})`],
+        [sel?.value === '2',
+          `select.value === "2" (got "${sel?.value}")`],
+      ]);
+    }
+
+    // ── Test 3 ──────────────────────────────────────────────────
+    {
+      const host = document.getElementById('test3');
+      const sel = deepSelect(host);
+
+      function checkTest3(label) {
+        const lightCount = host.querySelectorAll('option').length;
+        report('result3', [
+          [true, `── ${label} ──`],
+          [sel.options.length === lightCount,
+            `select.options.length === ${lightCount} (got ${sel.options.length})`],
+          [sel.options[sel.options.length - 1]?.value ===
+            host.querySelector('option:last-of-type')?.value,
+            `last option value matches light DOM`],
+        ]);
+      }
+
+      checkTest3('Before insertion');
+
+      document.getElementById('addNestedBtn').addEventListener('click', () => {
+        const opt = document.createElement('option');
+        opt.value = 'z';
+        opt.textContent = 'Zulu';
+        host.appendChild(opt);
+        requestAnimationFrame(() => checkTest3('After insertion'));
+      });
+    }
+
+    // ── Test 4 ──────────────────────────────────────────────────
+    {
+      const sel = deepSelect(document.getElementById('test4'));
+      if (sel) sel.selectedIndex = 2;
+
+      report('result4', [
+        [sel?.selectedIndex === 2,
+          `select.selectedIndex === 2 after setting it (got ${sel?.selectedIndex})`],
+        [sel?.value === 'b',
+          `select.value === "b" (got "${sel?.value}")`],
+        [sel?.selectedOptions[0]?.textContent === 'Blue',
+          `selectedOptions[0].textContent === "Blue" (got "${sel?.selectedOptions[0]?.textContent}")`],
+      ]);
+    }
+  </script>
+</body>
+</html>

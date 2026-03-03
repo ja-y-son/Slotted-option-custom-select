@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Basic Slotted Options in Custom Select</title>
+  <style>
+    select, ::picker(select) {
+      appearance: base-select;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .test-case {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+    .test-left {
+      padding: 1.5rem;
+    }
+    .test-left h2 { margin-top: 0; }
+    .test-right {
+      background: #1e1e2e;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      border-left: 3px solid #585880;
+    }
+    .test-right pre {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.5;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      color: #cdd6f4;
+    }
+    /* Syntax colors */
+    .tag   { color: #89b4fa; }
+    .attr  { color: #f9e2af; }
+    .val   { color: #a6e3a1; }
+    .cmt   { color: #6c7086; font-style: italic; }
+    .slot  { color: #fab387; font-weight: bold; }
+    .light { background: rgba(166,227,161,0.1); display: inline; }
+    .shadow-block {
+      border-left: 2px solid #b4befe;
+      padding-left: 0.5rem;
+      margin-left: 0.25rem;
+    }
+    .legend {
+      font-size: 11px;
+      margin-bottom: 0.75rem;
+      color: #a6adc8;
+    }
+    .legend span {
+      display: inline-block;
+      margin-right: 1rem;
+    }
+    .legend .swatch {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 3px;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .pass { color: green; }
+    .fail { color: red; }
+    .flat-tree-label {
+      color: #f38ba8;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test: Basic Slotted Options</h1>
+  <p>
+    A <code>&lt;select&gt;</code> inside a shadow root should recognize
+    <code>&lt;option&gt;</code> elements slotted in from the light DOM.
+  </p>
+
+  <!-- ============================================================ -->
+  <!-- Test 1: Single-level slot forwarding                          -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>1. Single-level slotted options</h2>
+      <p>Options are in the light DOM of <code>&lt;my-custom-select&gt;</code>,
+         slotted through a <code>&lt;slot&gt;</code> into the shadow DOM
+         <code>&lt;select&gt;</code>.</p>
+
+      <my-custom-select id="test1">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="a">Alpha</option>
+        <option value="b">Beta</option>
+        <option value="c">Gamma</option>
+      </my-custom-select>
+
+      <div class="result" id="result1"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM (slotted)</span>
+        <span><span class="swatch" style="background:#fab387"></span> &lt;slot&gt;</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="cmt">── shadow root ──────────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="cmt">▼ assigned nodes (light DOM):</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"a"</span><span class="tag">&gt;</span>Alpha<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Beta<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"c"</span><span class="tag">&gt;</span>Gamma<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+  <span class="cmt">─────────────────────────────────</span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">FLAT TREE (what select should see):</span>
+<span class="tag">&lt;select&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"a"</span><span class="tag">&gt;</span>Alpha<span class="tag">&lt;/option&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Beta<span class="tag">&lt;/option&gt;</span>
+  <span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"c"</span><span class="tag">&gt;</span>Gamma<span class="tag">&lt;/option&gt;</span>
+<span class="tag">&lt;/select&gt;</span></pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 2: Pre-selected option                                   -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>2. Pre-selected option</h2>
+      <p>The second option has the <code>selected</code> attribute.
+         <code>select.selectedIndex</code> should be <strong>1</strong>.</p>
+
+      <my-custom-select id="test2">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="x">X-ray</option>
+        <option value="y" selected>Yankee</option>
+        <option value="z">Zulu</option>
+      </my-custom-select>
+
+      <div class="result" id="result2"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM (slotted)</span>
+      </div>
+<pre>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="cmt">── shadow root ──────────────────</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"x"</span><span class="tag">&gt;</span>X-ray<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"y"</span> <span class="attr">selected</span><span class="tag">&gt;</span>Yankee<span class="tag">&lt;/option&gt;</span>  ← <span class="cmt">selected</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"z"</span><span class="tag">&gt;</span>Zulu<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+  <span class="cmt">─────────────────────────────────</span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.selectedIndex === 1
+select.value === "y"</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 3: Dynamic option insertion                              -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>3. Dynamic option insertion</h2>
+      <p>A new option is added to the light DOM after initial render.
+         The select should pick it up.</p>
+
+      <my-custom-select id="test3">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="1">One</option>
+        <option value="2">Two</option>
+      </my-custom-select>
+
+      <button id="addOptionBtn">Add "Three"</button>
+      <div class="result" id="result3"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="cmt">BEFORE (initial):</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"1"</span><span class="tag">&gt;</span>One<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"2"</span><span class="tag">&gt;</span>Two<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="cmt">AFTER click (JS appends to light DOM):</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"1"</span><span class="tag">&gt;</span>One<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"2"</span><span class="tag">&gt;</span>Two<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"3"</span><span class="tag">&gt;</span>Three<span class="tag">&lt;/option&gt;</span>  ← <span class="cmt">new</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length: 2 → 3</pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Test 4: Dynamic option removal                                -->
+  <!-- ============================================================ -->
+  <div class="test-case">
+    <div class="test-left">
+      <h2>4. Dynamic option removal</h2>
+      <p>Removing a slotted option from the light DOM should update the
+         select's option list.</p>
+
+      <my-custom-select id="test4">
+        <template shadowrootmode="open">
+          <select>
+            <slot></slot>
+          </select>
+        </template>
+        <option value="r">Red</option>
+        <option value="g" id="removeMe">Green</option>
+        <option value="b">Blue</option>
+      </my-custom-select>
+
+      <button id="removeOptionBtn">Remove "Green"</button>
+      <div class="result" id="result4"></div>
+    </div>
+    <div class="test-right">
+      <div class="legend">
+        <span><span class="swatch" style="background:#b4befe"></span> Shadow DOM</span>
+        <span><span class="swatch" style="background:#a6e3a1"></span> Light DOM</span>
+      </div>
+<pre>
+<span class="cmt">BEFORE:</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"r"</span><span class="tag">&gt;</span>Red<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"g"</span><span class="tag">&gt;</span>Green<span class="tag">&lt;/option&gt;</span>  ← <span class="cmt">removed</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Blue<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="cmt">AFTER click (JS removes from light DOM):</span>
+<span class="tag">&lt;my-custom-select&gt;</span>
+  <span class="shadow-block"><span class="tag">&lt;select&gt;</span>
+    <span class="slot">&lt;slot&gt;</span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"r"</span><span class="tag">&gt;</span>Red<span class="tag">&lt;/option&gt;</span></span>
+      <span class="light"><span class="tag">&lt;option</span> <span class="attr">value=</span><span class="val">"b"</span><span class="tag">&gt;</span>Blue<span class="tag">&lt;/option&gt;</span></span>
+    <span class="slot">&lt;/slot&gt;</span>
+  <span class="tag">&lt;/select&gt;</span></span>
+<span class="tag">&lt;/my-custom-select&gt;</span>
+
+<span class="flat-tree-label">EXPECTED:</span>
+select.options.length: 3 → 2</pre>
+    </div>
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────
+    function getInnerSelect(host) {
+      return host.shadowRoot.querySelector('select');
+    }
+
+    function report(id, lines) {
+      document.getElementById(id).innerHTML = lines
+        .map(([ok, msg]) =>
+          `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${msg}</span>`)
+        .join('\n');
+    }
+
+    // ── Test 1 ──────────────────────────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test1'));
+      report('result1', [
+        [sel.options.length === 3,
+          `select.options.length === 3 (got ${sel.options.length})`],
+        [sel.options[0]?.value === 'a',
+          `select.options[0].value === "a" (got "${sel.options[0]?.value}")`],
+        [sel.options[2]?.textContent === 'Gamma',
+          `select.options[2].textContent === "Gamma" (got "${sel.options[2]?.textContent}")`],
+        [sel.selectedIndex === 0,
+          `select.selectedIndex === 0 (got ${sel.selectedIndex})`],
+      ]);
+    }
+
+    // ── Test 2 ──────────────────────────────────────────────────
+    {
+      const sel = getInnerSelect(document.getElementById('test2'));
+      report('result2', [
+        [sel.selectedIndex === 1,
+          `select.selectedIndex === 1 (got ${sel.selectedIndex})`],
+        [sel.value === 'y',
+          `select.value === "y" (got "${sel.value}")`],
+        [sel.selectedOptions.length === 1,
+          `select.selectedOptions.length === 1 (got ${sel.selectedOptions.length})`],
+        [sel.selectedOptions[0]?.textContent === 'Yankee',
+          `select.selectedOptions[0].textContent === "Yankee" (got "${sel.selectedOptions[0]?.textContent}")`],
+      ]);
+    }
+
+    // ── Test 3 ──────────────────────────────────────────────────
+    {
+      const host = document.getElementById('test3');
+      const sel = getInnerSelect(host);
+
+      function checkTest3(label) {
+        report('result3', [
+          [true, `── ${label} ──`],
+          [sel.options.length === host.querySelectorAll('option').length,
+            `select.options.length === ${host.querySelectorAll('option').length} (got ${sel.options.length})`],
+          [sel.options[sel.options.length - 1]?.value ===
+            host.querySelector('option:last-of-type')?.value,
+            `last option value matches light DOM`],
+        ]);
+      }
+
+      checkTest3('Before insertion');
+
+      document.getElementById('addOptionBtn').addEventListener('click', () => {
+        const opt = document.createElement('option');
+        opt.value = '3';
+        opt.textContent = 'Three';
+        host.appendChild(opt);
+        requestAnimationFrame(() => checkTest3('After insertion'));
+      });
+    }
+
+    // ── Test 4 ──────────────────────────────────────────────────
+    {
+      const host = document.getElementById('test4');
+      const sel = getInnerSelect(host);
+
+      function checkTest4(label) {
+        const lightCount = host.querySelectorAll('option').length;
+        report('result4', [
+          [true, `── ${label} ──`],
+          [sel.options.length === lightCount,
+            `select.options.length === ${lightCount} (got ${sel.options.length})`],
+        ]);
+      }
+
+      checkTest4('Before removal');
+
+      document.getElementById('removeOptionBtn').addEventListener('click', () => {
+        const opt = document.getElementById('removeMe');
+        if (opt) opt.remove();
+        requestAnimationFrame(() => checkTest4('After removal'));
+      });
+    }
+  </script>
+</body>
+</html>
