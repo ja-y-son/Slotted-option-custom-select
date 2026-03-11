@@ -76,13 +76,14 @@ In base-appearance select, the first child `<button>` element is treated as the 
 - All imperative capabilities of select element, such as `select.options`, `select.selectedOptions`, `select.selectedIndex`, etc, should work seamlessly and treat all the slotted-in options as if they're light DOM children of select element.
 - Performance: A full flat-tree walk on every option query is too expensive. The implementation must be performant, but the specific approach is open to exploration.
 - The select's option list must stay in sync as options/optgroups are added, removed, or re-slotted.
+- The option change should be reflected "synchronously", as in observable immediately, instead of waiting for a microtask.
 
-## Current implementation ideas
-- **Notification-based approach:** React to slot assignment changes (e.g., `slotchange` events or the spec's "signal a slot change" mechanism) to maintain or invalidate a cached option list, rather than re-walking the tree on every access.
-- The select would need to recalculate its option list when:
-  - An `<option>` or `<optgroup>` is inserted into or removed from the light DOM
-  - Slot assignment changes, which may add or remove options from the select's flat tree
-  - An `<option>` is added to or removed from a slotted `<optgroup>`
+## Proposed implementation direction
+
+### Make Treescopes track descendant selects and notify them synchronously after slot assignment recalc is done
+- From [Mason’s comment](https://chromium-review.googlesource.com/c/chromium/src/+/6516400/comments/81a1a2f4_9c924377): Each TreeScope has a HashSet of \<select\> elements, which gets updated whenever a \<select\> is inserted or removed. It also has a bit like select_assignments_dirty_ that keeps track of whether the TreeScope has any dirty \<select\>s. So when you change the collection, you set the dirty bit. Then, after slot assignment is complete, any slot that had its assignment changed checks its TreeScope to see if there are tracked \<select\> elements, and if so, marks select_assignments_dirty_ true. Finally, once all of that marking takes place, you iterate the flat tree of all contained \<select\>s and update their lists of options and such.
+- Open question for this proposal: Does it require us to use new code path any time that a select element is put inside a shadow root?
+    - The same code path could probably be used in both cases. That would take a bit more work of course, because we'd have to invalidate selects that don't use slot assignment somehow. Since the TreeScope HashSet of \<selects\> includes all selects, you'd just need a trigger to recalculate separately from slot recalc. Will have to dig for an appropriate place to put that. Perhaps if you find a good spot after slot assignment recalc, you could just always do it there, rather than directly in slot assignment. Can't do it at microtask timing, because slots are sometimes recalculated synchronously and the results need to be observable. But perhaps right at the end of SlotAssignmentEngine::RecalcSlotAssignments() could be the place?
 
 ## What are we missing in HTML/DOM spec?
 
@@ -98,10 +99,10 @@ The following spec algorithms and definitions assume DOM tree traversal and woul
 
 5. **No slot-change hook for select ([DOM spec: "signal a slot change"](https://dom.spec.whatwg.org/#signal-a-slot-change))** — When slot assignment changes, there is currently no mechanism for a select element to be notified that options may have been added or removed from its flat tree. A new hook is needed so the select can re-run its selectedness setting algorithm when slot assignment changes.
 
-## Prior prototyping
+## Prior prototyping for reference
 - [CL 6516400: Support slotting \<options\> in \<select\>](https://chromium-review.googlesource.com/c/chromium/src/+/6516400) — Adds basic functionality to slot `<option>` elements into a `<select>` by looking at the flat tree when the select has a descendant `<slot>` that fires `slotchange`. Observable via `select.options` and `select.selectedOptions`. Currently has merge conflicts and open review feedback around the overall approach (e.g., concerns about modifying `HTMLCollection` for flat-tree traversals and adding select-specific logic to `HTMLSlotElement`).
 - [CL 6892064: Make \<select\> UA styles work for slotted options](https://chromium-review.googlesource.com/c/chromium/src/+/6892064) — Companion CL that changes UA stylesheet selectors for `<option>` and `<optgroup>` from ancestor-based selectors (which only match in light DOM) to pseudo-classes applied directly on the elements, enabling UA styles to work across the flat tree.
-- [Design/discussion doc](https://docs.google.com/document/d/1f3dqMe00eZqC3DLDh93_D5tVRiDDByfbQDH3CU8p2gE/edit?usp=sharing)
+
 
 ## Design:
 - The correct select needs to know it needs to recalc
